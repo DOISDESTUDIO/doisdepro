@@ -456,8 +456,17 @@
   <span id="toast-msg"></span>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
+const SUPABASE_URL = "https://vwdtehktjlagvyiyzrvz.supabase.co/rest/v1/";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3ZHRlaGt0amxhZ3Z5aXl6cnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNTMyMzMsImV4cCI6MjA5NjcyOTIzM30.NCFFURM3C4T1uVgTe9Rp-0tWI20YvajLRmfbsqXHYlw";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
 const STORAGE_KEY = 'doisdê-leads-v1';
 let leads = [];
 let currentPage = 1;
@@ -497,16 +506,26 @@ const SAMPLE = [
 ];
 
 // STORAGE
-function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(leads)); } catch(e) {}
+async function saveLeadToDB(lead) {
+  const { error } = await supabase
+    .from('leads')
+    .upsert([lead]);
+
+  if (error) {
+    console.error(error);
+  }
 }
-function load() {
-  try {
-    const d = localStorage.getItem(STORAGE_KEY);
-    if (d) { leads = JSON.parse(d); return; }
-  } catch(e) {}
-  leads = SAMPLE.map(l => ({...l}));
-  save();
+async function load() {
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*');
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  leads = data || [];
 }
 
 // INIT
