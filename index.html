@@ -463,10 +463,9 @@
 const SUPABASE_URL = "https://vwdtehktjlagvyiyzrvz.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3ZHRlaGt0amxhZ3Z5aXl6cnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNTMyMzMsImV4cCI6MjA5NjcyOTIzM30.NCFFURM3C4T1uVgTe9Rp-0tWI20YvajLRmfbsqXHYlw";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const supabase = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 const STORAGE_KEY = 'doisdê-leads-v1';
 let leads = [];
@@ -525,6 +524,13 @@ async function deleteLeadFromDB(id) {
 }
 
 async function load() {
+  if (!supabase) {
+    console.warn('Supabase indisponível. Usando dados locais.');
+    leads = SAMPLE;
+    renderAll();
+    return;
+  }
+
   const { data, error } = await supabase
     .from('leads')
     .select('*')
@@ -532,7 +538,7 @@ async function load() {
 
   if (error) {
     console.error('Erro ao carregar:', error);
-    leads = [];
+    leads = SAMPLE;
   } else {
     leads = data || [];
   }
