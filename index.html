@@ -457,9 +457,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
 <script>
-const SUPABASE_URL = "https://vwdtehktjlagvyiyzrvz.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://vwdtehktjlagvyiyzrvz.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ3ZHRlaGt0amxhZ3Z5aXl6cnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNTMyMzMsImV4cCI6MjA5NjcyOTIzM30.NCFFURM3C4T1uVgTe9Rp-0tWI20YvajLRmfbsqXHYlw";
 
 const supabase = window.supabase.createClient(
@@ -506,37 +507,43 @@ const SAMPLE = [
 ];
 
 // STORAGE
+async function save() { /* não usado — Supabase cuida disso */ }
+
 async function saveLeadToDB(lead) {
   const { error } = await supabase
     .from('leads')
-    .upsert([lead]);
-
-  if (error) {
-    console.error(error);
-  }
+    .upsert([lead], { onConflict: 'id' });
+  if (error) console.error('Erro ao salvar:', error);
 }
+
+async function deleteLeadFromDB(id) {
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', id);
+  if (error) console.error('Erro ao excluir:', error);
+}
+
 async function load() {
   const { data, error } = await supabase
     .from('leads')
-    .select('*');
+    .select('*')
+    .order('id', { ascending: false });
 
   if (error) {
-    console.error(error);
-    return;
+    console.error('Erro ao carregar:', error);
+    leads = [];
+  } else {
+    leads = data || [];
   }
-
-  leads = data || [];
+  renderAll();
 }
 
 // INIT
 function init() {
-  load();
   document.getElementById('date-display').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'});
   document.querySelector('input[type="date"]#f-data').value = new Date().toISOString().split('T')[0];
-  renderPills();
-  renderTable();
-  renderAlerts();
-  updateKPIs();
+  load(); // load() chama renderAll() ao terminar
 }
 
 // KPIs
@@ -783,11 +790,12 @@ function editCurrentLead() {
   openModal(detailId || (detailId === null ? null : detailId));
 }
 
-function deleteLead() {
+async function deleteLead() {
   if (!detailId) return;
   if (!confirm('Excluir este lead? Esta ação não pode ser desfeita.')) return;
-  leads = leads.filter(l => l.id !== detailId);
-  save();
+  const id = detailId;
+  await deleteLeadFromDB(id);
+  leads = leads.filter(l => l.id !== id);
   closeDetailPanel();
   renderAll();
   toast('Lead excluído.');
@@ -815,7 +823,7 @@ function openModal(id) {
 
 function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); editingId = null; }
 
-function saveLead() {
+async function saveLead() {
   const nome = document.getElementById('f-nome').value.trim();
   if (!nome) { document.getElementById('f-nome').focus(); return; }
   const lead = {
@@ -851,7 +859,7 @@ function saveLead() {
     leads.push(lead);
     toast('Lead cadastrado!');
   }
-  save();
+  await saveLeadToDB(lead);
   closeModal();
   renderAll();
 }
